@@ -1,3 +1,5 @@
+"use client"
+
 import DataTable, {Column, Data} from "@/components/features/data-table";
 import {Badge} from "@/components/ui/badge";
 
@@ -118,8 +120,6 @@ const Page = () => {
     return (
         <>
             <DataTable
-                title={"Orders"}
-                description={"Recent orders from your store."}
                 columns={columns}
                 data={data}
             />

@@ -23,7 +23,7 @@ const Layout = ({children}: {
 }) => {
 
 
-    let pathname = usePathname()
+    const pathname = usePathname()
 
 
     return (

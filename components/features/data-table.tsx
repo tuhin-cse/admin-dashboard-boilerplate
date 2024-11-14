@@ -1,6 +1,18 @@
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
+"use client"
+
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription, DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger
+} from "@/components/ui/dialog";
 import React from "react";
+import {Button} from "@/components/ui/button";
+import {useAction} from "@/helpers/hooks";
+import {cn} from "@/lib/utils";
 
 
 export interface Data {
@@ -24,49 +36,132 @@ interface Pagination {
 
 
 const DataTable = ({
-                       title,
-                       description,
                        columns,
                        data,
+                       indexed,
+                       onView,
+                       onEdit,
+                       onDelete,
+                       onReload
                    }: {
-    title: string;
-    description?: string;
     columns: Column[],
     data: Pagination | Data[],
+    indexed?: boolean,
+    onView?: (row: Data) => void,
+    onEdit?: (row: Data) => void,
+    onDelete?: (row: Data) => void,
+    onReload?: () => void
 }) => {
 
-    const docs: Data[] = "docs" in data ? data.docs : data;
+    const hasAction = !!onView || !!onEdit || !!onDelete;
+
+    const [loading, setLoading] = React.useState(false);
+    const [show, setShow] = React.useState(false);
+
+    const hasPagination = typeof data !== "undefined" && "totalDocs" in data;
+    const docs: Data[] = hasPagination ? data.docs : data;
+
     return (
-        <Card>
-            <CardHeader className="px-7 pb-4 mb-2 border-b">
-                <CardTitle>{title}</CardTitle>
-                <CardDescription>{description}</CardDescription>
-            </CardHeader>
-            <CardContent className="pb-3">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            {columns.map((column, index) => (
-                                <TableHead key={index} className={column.headerClassName}>
-                                    {column.name}
-                                </TableHead>
-                            ))}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {docs.map((row, index: number) => (
-                            <TableRow key={index}>
-                                {columns.map((column, index) => (
-                                    <TableCell key={index} className={column.cellClassName}>
-                                        {column.formatter ? column.formatter(row[column.key], row) : row[column.key]}
-                                    </TableCell>
-                                ))}
-                            </TableRow>
+        <>
+            <Table className={cn("border-y data-table", hasPagination && "pagination")}>
+                <TableHeader>
+                    <TableRow>
+                        {indexed && <TableHead className="w-[50px] md:w-[100px]">#</TableHead>}
+                        {columns.map((column, index) => (
+                            <TableHead key={index} className={column.headerClassName}>
+                                {column.name}
+                            </TableHead>
                         ))}
-                    </TableBody>
-                </Table>
-            </CardContent>
-        </Card>
+                        {hasAction && <TableHead className="text-end">Action</TableHead>}
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {docs?.map((row, index: number) => (
+                        <TableRow key={index}>
+                            {indexed && <TableCell className="w-[50px] md:w-[100px]">{index + 1}</TableCell>}
+                            {columns.map((column, index) => (
+                                <TableCell key={index} className={column.cellClassName}>
+                                    {column.formatter ? column.formatter(row[column.key], row) : row[column.key]}
+                                </TableCell>
+                            ))}
+                            {hasAction && (
+                                <TableCell>
+                                    <div className="flex justify-end items-center gap-2">
+                                        {onView && (
+                                            <Button
+                                                variant="secondary"
+                                                size="sm"
+                                                onClick={() => onView(row)}
+                                                className="text-primary-600 hover:text-primary-700"
+                                            >
+                                                View
+                                            </Button>
+                                        )}
+
+
+
+                                        {onEdit && (
+                                            <Button
+                                                variant="secondary"
+                                                size="sm"
+                                                onClick={() => onEdit(row)}
+                                                className="text-primary-600 hover:text-primary-700"
+                                            >
+                                                Edit
+                                            </Button>
+                                        )}
+                                        {onDelete && (
+                                            <Dialog open={show} onOpenChange={setShow}>
+                                                <DialogTrigger asChild>
+                                                    <Button
+                                                        variant="destructive"
+                                                        size="sm"
+                                                    >
+                                                        Delete
+                                                    </Button>
+                                                </DialogTrigger>
+                                                <DialogContent>
+                                                    <DialogHeader>
+                                                        <DialogTitle>Are you absolutely sure?</DialogTitle>
+                                                        <DialogDescription>
+                                                            This action cannot be undone. This will permanently delete
+                                                            this
+                                                            record.
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+                                                    <DialogFooter>
+                                                        <Button
+                                                            disabled={loading}
+                                                            onClick={() => setShow(false)}
+                                                            variant="secondary">Cancel</Button>
+                                                        <Button
+                                                            disabled={loading}
+                                                            onClick={() => {
+                                                                setLoading(true)
+                                                                // eslint-disable-next-line react-hooks/rules-of-hooks
+                                                                return useAction(onDelete, {oid: row._id}, () => {
+                                                                    if (onReload) {
+                                                                        onReload()
+                                                                    }
+                                                                    setShow(false)
+                                                                    setLoading(false)
+                                                                }, () => {
+                                                                    setLoading(false)
+                                                                })
+                                                            }}
+                                                            variant="destructive">Confirm</Button>
+                                                    </DialogFooter>
+                                                </DialogContent>
+                                            </Dialog>
+                                        )}
+                                    </div>
+                                </TableCell>
+                            )}
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </>
     )
 
 }
